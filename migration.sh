@@ -13,23 +13,26 @@ today=$(date +%Y%m%d)
 div=======================================
 
 /usr/bin/clear
+ERR_MSG=""
 cat << "EOF" 
-                  __   _,--="=--,_   __
-                 /  \."    .-.    "./  \
-                /  ,/  _   : :   _  \/` \
-                \  `| /o\  :_:  /o\ |\__/
-                 `-'| :="~` _ `~"=: |
-                    \`     (_)     `/
-             .-"-.   \      |      /   .-"-.
-        .---{     }--|  /,.-'-.,\  |--{     }---.
-         )  (_)_)_)  \_/`~-===-~`\_/  (_(_(_)  (
-        (                                       )
-         ) MIGRATION SCRIPT                    (
-        (  Author Akhil P                       )
-         ) akhil.pra@endurance.com             (
-        (  VISIT MROBOT.IN                      )
-         ) http://www.mrobot.online            (
-        '---------------------------------------'
+                    __   _,--="=--,_   __
+                   /  \."    .-.    "./  \
+                  /  ,/  _   : :   _  \/` \
+                  \  `| /o\  :_:  /o\ |\__/
+                   `-'| :="~` _ `~"=: |
+                      \`     (_)     `/
+               .-"-.   \      |      /   .-"-.
+        .-----{     }--|  /,.-'-.,\  |--{     }----.
+         )    (_)_)_)  \_/`~-===-~`\_/  (_(_(_)   (
+        (                                          )
+         ) SCRIPT: Migration Script               (
+        (  VERSION: 2.0                            )
+         ) AUTHOR: Akhil P                        (
+        (  EMAIL: akhil.pra@endurance.com          )
+         ) MY REPO: https://github.com/akhilp1708 (
+        (  VISIT MROBOT.IN                         )
+         ) http://www.mrobot.online               (
+        '------------------------------------------'
 
 EOF
 # These variables hold the counters.
@@ -40,11 +43,12 @@ mag=$'\e[1;35m'
 cyn=$'\e[1;36m'
 white=$'\e[0m'
 ylw=$'\e[1;33'
-ERR_MSG=""
 
-RESTORE="$(/scripts/restorepkg)"
-PACKAGE="$(/scripts/pkgacct)"
-WHOOWNS="$(/scripts/whoowns)"
+FILE=$(echo $BACKUP | cut -d'/' -f3)
+LINK="http://$SOURCE/$FILE"
+RESTORE=`sudo /scripts/restorepkg`
+PACKAGE=`sudo /scripts/pkgacct`
+WHOOWNS=`sudo /scripts/whoowns`
 USER="$WHOOWNS $DOMAIN"
 
 #Auto accept rsa key fingerprint from command line
@@ -76,20 +80,7 @@ Read -p "$blu Enter Domain name $white: " DOMAIN
 read -p "Are the information correct? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo ""
 
-read -p "To add SSH keys between $SOURCE and $DESTINATION , Please confirm with option (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 
-echo ""
-echo "Note: Only press $red ENTER $white option and keep the default settings for generating SSH keys"
-sleep 1s
-
-echo ""
-sshtmp -l $WSS $SOURCE "ssh-keygen"
-sshtmp -l $WSS $SOURCE "cat ~/.ssh/id_rsa.pub | ssh $WSS@$DESTINATION "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys""
-
-echo ""
-sleep 1s
-echo "$grn KEYS ADDED SUCCESS $white"
-echo ""
 read -p "$mag READY FOR MIGRATION? $white $red PRESS 'Y' TO START AND 'N' TO QUIT (Y/N) $white: " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo ""
 
@@ -98,29 +89,37 @@ OWNER=$(sshtmp -l $WSS $SOURCE "$USER")
 echo "The $DOMAIN is owned by account $OWNER, Now taking the backup of this account "
 sleep 1s
 
+
 # Taking the package account
 sshtmp -l $WSS $SOURCE "$PACKAGE $USER"
 
 echo ""
 read -p "Enter the backup file path : " BACKUP
 
-
-#  Now, login to source server and use rsync command to move the backup file from source to the target server :-
-
-sshtmp -A $SOURCE rsync -vaur $BACKUP -e "sshtmp -i .ssh/id_rsa" $WSS@$DESTINATION
+sshtmp -l $WSS $SOURCE /bin/bash << EOF
+echo -e "Copying backup file to documentroot...."
+sudo cp -pvr $backup /usr/local/apache/htdocs/
+echo -e "Setting permission for backup file...."
+sudo chmod 644 /usr/local/apache/htdocs/$FILE
+EOF
 
 echo ""
-
+echo "Genearting backup link....."
+echo "The backup link generated is $LINK"
+echo "Uploading the backup to $DESTINATION server"
+sshtmp -l $WSS $DESTINATION "sudo wget $LINK"
+echo "" ; echo "UPLOAD COMPLETE" ; echo ""
 echo "Now restoring the $BACKUP ....\n Restoring the account $OWNER in server $DESTINATION ....."
 
 echo ""
 
-sshtmp -l $WSS $DESTINATION "$RESTORE $BACKUP"	
+sshtmp -l $WSS $DESTINATION "$RESTORE $FILE"
 
-echo ""
-Sleep 1s
+echo "" ; Sleep 1s
 echo "$grn RESTORATION COMPLETED SUCCESSFULLY $white"
 echo ""
+
+
 echo "$red Now please update the new server details in OBEE using the HOSTING SYNC TOOL in support account according to the brand. $white"
 echo ""
 echo "Please find the below details to update in $red HOSTING SYNC TOOL $white"
@@ -128,11 +127,7 @@ echo "Please find the below details to update in $red HOSTING SYNC TOOL $white"
 sshtmp -l $WSS $DESTINATION /bin/bash << EOF
 sudo /scripts/ipusage | grep $DOMAIN
 sudo /scripts/whoowns $DOMAIN
-EOF  
+EOF 
 
-
-
-
-
-
-
+#Logging the use of the script.
+echo "[`date`] [`whoami`] Executed the Migration_script" >> /home/akhil.pra/execution.log
