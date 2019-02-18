@@ -46,9 +46,9 @@ ylw=$'\e[1;33'
 
 FILE=$(echo $BACKUP | cut -d'/' -f3)
 LINK="http://$SOURCE/$FILE"
-RESTORE=`sudo /scripts/restorepkg`
-PACKAGE=`sudo /scripts/pkgacct`
-WHOOWNS=`sudo /scripts/whoowns`
+RESTORE="sudo /scripts/restorepkg"
+PACKAGE="sudo /scripts/pkgacct"
+WHOOWNS="sudo /scripts/whoowns"
 USER="$WHOOWNS $DOMAIN"
 
 #Auto accept rsa key fingerprint from command line
