@@ -1,4 +1,5 @@
 #!/bin/bash
+#Author Akhil P
 /usr/bin/clear
 ERR_MSG=""
 cat << "EOF" 
