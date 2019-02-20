@@ -1,3 +1,8 @@
+#!bin/bash
+#Author: Akhil P
+#Script to migrate single cpanel account to remote server by exchanging the ssh keys
+/usr/bin/clear
+ERR_MSG=""
 PATH=$PATH:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/home/`whoami`/bin
 # These variables hold the color counters.
 red=$'\e[1;31m'
