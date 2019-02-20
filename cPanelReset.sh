@@ -77,7 +77,7 @@ sudo touch {/var/log/pkgacct.log,/var/log/removeacct.log,/var/log/restorepkg.log
 
 #Step 1: Taking the backup of cpanel account skipping the user home directory files, databases, zone, logs..etc
 
-sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/pkgacct.log ; tail /var/log/pkgacct.log
+sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/pkgacct.log ; sudo tail /var/log/pkgacct.log
 
 sleep 5s 
 echo "" ; echo "" 
@@ -86,7 +86,7 @@ echo ""
 
 #Step 2: Removing the cpanel account completely 
 
-sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/removeacct.log ; tail /var/log/removeacct.log
+sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/removeacct.log ; sudo tail /var/log/removeacct.log
 
 sleep 5s 
 echo "" ; echo "" 
@@ -95,7 +95,7 @@ echo ""
 
 #Step 3: Restoring the cpanel account from the backup generated in Step 1
 
-sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/restorepkg.log ; tail /var/log/restorepkg.log
+sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/restorepkg.log ; sudo tail /var/log/restorepkg.log
 
 sleep 5s 
 echo "" ;echo "" 
