@@ -58,10 +58,10 @@ echo ""
 read -p "$red Continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo "" 
 sleep 2s
-echo -e "$mag The execution of this script is logged :-) $white"
 
 #Logging the use of the script.
 
+echo -e "$mag The execution of this script is logged :-) $white"
 echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/execution.log
 echo ""
 
