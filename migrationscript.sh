@@ -33,6 +33,13 @@ ylw=$'\e[1;33'
          -o "UserKnownHostsFile /dev/null" \
               "$@"
  }
+ function scptmp
+ {
+     exec scp -o "ConnectTimeout 3" \
+         -o "StrictHostKeyChecking no" \
+         -o "UserKnownHostsFile /dev/null" \
+         "$@"
+ }
  
 echo " $mag
 Note:
@@ -52,8 +59,8 @@ $white
 
 #Get the WSS username
 
-WSS=`whoami`
-
+#WSS=`whoami`
+WSS=root
 #Step 1: Get the inputs from the user
 
 read -p "$blu Enter the Source server IP $white: " SOURCE
@@ -68,27 +75,31 @@ sleep 4s
 
 #Step 2: Generating and copying SSH keys between the source and remote server
 
-sshtmp -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
+
+
+sshtmp -q -l $WSS $SOURCE /bin/bash  <<'EOF'
     echo "Generating SSH keys : "
-    echo "Please press 'ENTER' and keep the default location"
-    sudo ssh-keygen   
-    KEY="/home/$WSS/.ssh/id_rsa.pub"
-    echo "`cat $KEY`" >> KEYCODE.txt
-    VAR="$(sudo cat KEYCODE.txt)"                                                                    
-ENDSSH
+    echo ""
+    yes "y" | ssh-keygen -t rsa -N "" -f my.key
+    echo ""
+    echo "`cat my.key.pub`" > KEYCODE.txt
+EOF
 
 sleep 4s
 echo ""
 echo "Putting your key on $DEST server... "   
 echo ""
 
-sshtmp -q -l $WSS $DEST 'bash -s' <<'ENDSSH'
-    echo $VAR >> ~/.ssh/authorized_keys
-ENDSSH
+RESULTS=$(sshtmp -q -l $WSS $SOURCE 'cat KEYCODE.txt')
+echo $RESULTS > result.txt
 
-sshtmp -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
-    sudo sshtmp -q $WSS@$DEST  && echo SUCCESS || echo Failed
-ENDSSH
+scp -r result.txt $WSS@$DEST:/root/
+sshtmp -q -l $WSS $DEST "cat result.txt >> /root/.ssh/authorized_keys"
+
+    
+sshtmp -q -l $WSS $SOURCE /bin/bash <<'EOF'
+    ssh -q -i my.key $WSS@$DEST  && echo SUCCESS || echo Failed
+EOF
 
 #Step 3: Login to source server and take a pkgacct and do the rsync. The rsync will copy the backup to /home/wssuser/
 
@@ -96,7 +107,7 @@ echo ""
 echo "Now generating the backup of the account $USER "
 echo ""
 
-sshtmp -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
+sshtmp -q -l $WSS $SOURCE /bin/bash <<'EOF'
 sudo touch /var/log/temp.log
 sudo /scripts/pkgacct $USER &>> /var/log/temp.log 
 sudo tail /var/log/temp.log
@@ -104,12 +115,12 @@ sleep 4s
 echo "Backup generation complete..!"
 echo ""
 echo "Copying backup to $DEST server, using rsync...."
-sudo rsync -avzP /home/cpmove-$USER.tar.gz -e "ssh -i .ssh/id_rsa" $WSS@$DEST:/home/$WSS/
+sudo rsync -avzP /home/cpmove-$USER.tar.gz -e "ssh -i my.key" $WSS@$DEST
 echo ""
 sleep 2s
 echo "Copying complete"
 echo ""
-ENDSSH
+EOF
 
 #Step 4:  Now login to the destination server and restore the package there
 
@@ -126,9 +137,7 @@ echo ""
 sleep 2s
 echo "Verifying the restore...."
 echo ""
-
 #Step 5: Verification of restoration. Checking if the domain exists after migration.
-
 sudo /scripts/whoowns $DOMAIN &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
