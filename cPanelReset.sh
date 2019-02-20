@@ -59,6 +59,10 @@ read -p "$red Continue with the account reset? $white (Y/N): " confirm && [[ $co
 echo "" 
 sleep 2s
 echo -e "$mag The execution of this script is logged :-) $white"
+
+#Logging the use of the script.
+
+echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/execution.log
 echo ""
 
 sshtmp -q -l $WSS $SERVER /bin/bash << EOF
@@ -124,5 +128,4 @@ else
     echo ""
 fi
 
-#Logging the use of the script.
-echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/execution.log
+#END
