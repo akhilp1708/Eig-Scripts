@@ -34,7 +34,7 @@ ylw=$'\e[1;33'
               "$@"
  }
  
-echo "
+echo " $mag
 Note:
 
 Kindly make a note of the following before starting the migration on shared hosting. 
@@ -47,6 +47,7 @@ Kindly make a note of the following before starting the migration on shared host
 3. While updating BLL, make sure you specify the correct hostname. This is important as the BLL script will check the tempURL to verify the server hostname. There are 2 types of hostnames: *.webhostbox.net which is a normal server. *.brandservers.com which is a branded hostname. 
  
 If the server is a branded server, we should use the branded server hostname only. If you use  *.webhostbox.net for a branded server, the query to update BLL won't work.
+$white
 "
 
 #Get the WSS username
@@ -67,36 +68,35 @@ sleep 4s
 
 #Step 2: Generating and copying SSH keys between the source and remote server
 
-KEY="cat /home/$WSS/.ssh/id_dsa.pub"
-
-ssh -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
+sshtmp -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
     echo "Generating SSH keys : "
     echo "Please press 'ENTER' and keep the default location"
     sudo ssh-keygen   
+    KEY="/home/$WSS/.ssh/id_rsa.pub"
     echo "`cat $KEY`" >> KEYCODE.txt
     VAR="$(sudo cat KEYCODE.txt)"                                                                    
 ENDSSH
 
 sleep 4s
 echo ""
-echo "Putting your key on $DEST... "   
+echo "Putting your key on $DEST server... "   
 echo ""
 
-ssh -q -l $WSS $DEST 'bash -s' <<'ENDSSH'
+sshtmp -q -l $WSS $DEST 'bash -s' <<'ENDSSH'
     echo $VAR >> ~/.ssh/authorized_keys
 ENDSSH
 
-ssh -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
-    sudo ssh -q $WSS@$DEST  && echo SUCCESS || echo Failed
+sshtmp -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
+    sudo sshtmp -q $WSS@$DEST  && echo SUCCESS || echo Failed
 ENDSSH
 
-#Step 3: Login to source server and take a pkgacct and do the rsync
+#Step 3: Login to source server and take a pkgacct and do the rsync. The rsync will copy the backup to /home/wssuser/
 
 echo ""
 echo "Now generating the backup of the account $USER "
 echo ""
 
-ssh -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
+sshtmp -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
 sudo touch /var/log/temp.log
 sudo /scripts/pkgacct $USER &>> /var/log/temp.log 
 sudo tail /var/log/temp.log
@@ -117,16 +117,17 @@ ssh -q -l $WSS $DEST 'bash -s' <<'ENDSSH'
 sudo touch /var/log/temp.log
 echo "Restore in progress..."
 sleep 2s
-sudo /scripts/restorepkg /home/cpmove-$USER.tar.gz &>> /var/log/temp.log 
+sudo /scripts/restorepkg /home/$WSS/cpmove-$USER.tar.gz &>> /var/log/temp.log 
 sleep 2s
-sudo tail /var/log/temp.log.log
+sudo tail /var/log/temp.log
+echo ""
 echo "Restoring the backup in destination server $DEST completed"
 echo ""
 sleep 2s
-echo "Verifying...."
+echo "Verifying the restore...."
 echo ""
 
-#Step 5: Verification of restoration. Checking if the domain exists after termination.
+#Step 5: Verification of restoration. Checking if the domain exists after migration.
 
 sudo /scripts/whoowns $DOMAIN &> temp.txt
 RESULT="$(cat temp.txt)"
@@ -136,7 +137,7 @@ if [[  $RESULT == $USER ]]; then
 else
     echo -e "$red VERFICATION FAILED!!!!  CONTACT HPS!!!! $white"
     echo ""
-    read -p "$red If verification failed then input 'N' $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+    read -p "$red If verification failed then input 'N' to quit the process with this step itself. $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 fi
 ENDSSH
 
@@ -144,7 +145,10 @@ ENDSSH
 
 ssh -q -l $WSS $SOURCE 'bash -s' <<'ENDSSH'
 echo ""
-sudo /scripts/suspendacct $USER "Migrated to a different server - $TICKET"
+echo "Now suspending the user in source server $SOURCE"
+echo ""
+sudo /scripts/suspendacct $USER "Migrated to a different server - $TICKET" &>> /var/log/temp.log 
+sudo tail /var/log/temp.log
 echo ""
 sleep 4s
 echo "ACCOUNT SUSPENDED IN SOURCE SERVER"
@@ -153,11 +157,11 @@ ENDSSH
 
 # Step 7: delete the public key from the target server after finishing the migration
 
-# The below loop removes the key containing some unique string or just deletes the authorized_keys file when no other key remains
+# The below loop removes the key containing 'some unique string' (wss user name) or just deletes the authorized_keys file when no other key remains
 
 ssh -q $DEST
 if test -f $HOME/.ssh/authorized_keys; then
-  if grep -v "some unique string" $HOME/.ssh/authorized_keys > $HOME/.ssh/tmp; then
+  if grep -v "$WSS" $HOME/.ssh/authorized_keys > $HOME/.ssh/tmp; then
     cat $HOME/.ssh/tmp > $HOME/.ssh/authorized_keys && rm $HOME/.ssh/tmp;
   else
     rm $HOME/.ssh/authorized_keys && rm $HOME/.ssh/tmp;
