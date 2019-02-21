@@ -44,14 +44,10 @@ ylw=$'\e[1;33'
 echo " $mag
 Note:
 Kindly make a note of the following before starting the migration on shared hosting.
-
 1. Make sure that you are migrating the domain to a normal server or branded one which hosts the corresponding brand domains.
-
 2. Do not migrate to a cross-branded server. You can check the branding details here.
    Ex: If the hosting is with HGI, then migrate the domain to the server which has HGI orders or HGI branded servers.
-
 3. While updating BLL, make sure you specify the correct hostname. This is important as the BLL script will check the tempURL to verify the server hostname. There are 2 types of hostnames: *.webhostbox.net which is a normal server. *.brandservers.com which is a branded hostname.
-
 If the server is a branded server, we should use the branded server hostname only. If you use  *.webhostbox.net for a branded server, the query to update BLL won't work.
 $white
 "
@@ -77,6 +73,10 @@ echo ""
 yes "y" | ssh-keygen -t rsa -N "" -f source.key
 echo""
 
+#String
+
+#cat source.key.pub | awk '{print $2}' > string.txt
+STRING=$(cat string1.txt)
 
 echo "Copying the key to source server $SOURCE ....."
 echo ""
@@ -107,10 +107,13 @@ echo ""
 echo "Verifying the working of keys !"
 echo ""
 
-
-
-#sshtmp -q -l $WSS $DEST 'if test -f $HOME/.ssh/authorized_keys; then if grep -v "$STRING" $HOME/.ssh/authorized_keys > $HOME/.ssh/tmp; then cat $HOME/.ssh/tmp > $HOME/.ssh/authorized_keys && rm $HOME/.ssh/tmp; else rm $HOME/.ssh/authorized_keys && rm $HOME/.ssh/tmp; fi; fi'
-
-sshtmp -q -l $WSS $SOURCE /bin/bash <<'EOF'
-    ssh -q -i source.key $WSS@$DEST  && echo SUCCESS || echo Failed
+scp -r string.txt $WSS@$DEST:/$WSS/
+sshtmp -tt -q -l $DEST /bin/bash <<'EOF'
+echo "$(cat string.txt | awk '{print $2}' > string1.txt)"
+STRING=$(cat string1.txt)
+echo \$STRING
+sed -i.bak '/$STRING/d' ~/.ssh/authorized_keys
 EOF
+
+
+#sshtmp -n -q -l $WSS $SOURCE /bin/bash "ssh -i source.key $WSS@$DEST 'echo success'"
