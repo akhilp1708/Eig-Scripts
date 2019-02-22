@@ -33,13 +33,6 @@ ylw=$'\e[1;33'
          -o "UserKnownHostsFile /dev/null" \
               "$@"
  }
- function scptmp
- {
-     exec scp -o "ConnectTimeout 3" \
-         -o "StrictHostKeyChecking no" \
-         -o "UserKnownHostsFile /dev/null" \
-         "$@"
- }
 
 echo " $mag
 Note:
@@ -66,33 +59,34 @@ read -p "$blu Enter the Ticket-ID $white: " TICKET
 echo ""
 sleep 2s
 read -p "$red Please cross-check the Source/Destination server IP and other informations and procceed? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
-sleep 2s
+
 
 #Step 2: Generating and copying SSH keys for source and remote server
 echo ""
-yes "y" | ssh-keygen -t rsa -N "" -f source.key
+yes "y" | ssh-keygen -t rsa -N "" -f source.key 2> /dev/null
 echo""
 
 #String
 
-#cat source.key.pub | awk '{print $2}' > string.txt
-STRING=$(cat string1.txt)
+cat source.key.pub | awk '{print $2}' > string.txt
+STRING=$(cat string.txt)
 
-echo "Copying the key to source server $SOURCE ....."
+
+echo "$blu Copying the key to source server $SOURCE .....$white"
 echo ""
 
-scp -r source.key $WSS@$SOURCE:/$WSS/
+scp -r source.key $WSS@$SOURCE:/$WSS/ 2> /dev/null
 sshtmp -q -l $WSS $SOURCE /bin/bash  <<'EOF'
     sudo chmod 600 source.key
 EOF
 
-sleep 2s
-echo "Copying the public key to destination server $DEST ...."
+sleep 1s
+echo "$blu Copying the public key to destination server $DEST .... $white"
 echo ""
 
 # Echo the public key to the destination server, also using uniq and sort we get the uniq entries only from authorised_keys, this is to avoid duplicate entries.
 
-scp -r source.key.pub $WSS@$DEST:/$WSS/
+scp -r source.key.pub $WSS@$DEST:/$WSS/ 2> /dev/null
 
 
 sshtmp -q -l $WSS $DEST /bin/bash  <<'EOF'
@@ -101,19 +95,44 @@ sshtmp -q -l $WSS $DEST /bin/bash  <<'EOF'
     yes | mv ~/.ssh/authorized_keys{.uniq,}
 EOF
 
-sleep 2s
-echo "Keys exchanged !"
+sleep 1s
+echo "$grn Keys exchanged ! $white"
 echo ""
-echo "Verifying the working of keys !"
+echo "$mag Starting the backup generation of account $USER in source server $SOURCE... $white"
+echo ""
+ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo touch /var/log/execution.log ; sudo /scripts/pkgacct $USER  &>> /var/log/execution.log ; sudo tail /var/log/execution.log ; echo "" ; sleep 1s ; echo "$grn Backup process of account $USER completed. Now copying the backup to destination server.. $DEST Please hold on....$white""
+
 echo ""
 
-scp -r string.txt $WSS@$DEST:/$WSS/
-sshtmp -tt -q -l $DEST /bin/bash <<'EOF'
-echo "$(cat string.txt | awk '{print $2}' > string1.txt)"
-STRING=$(cat string1.txt)
-echo \$STRING
-sed -i.bak '/$STRING/d' ~/.ssh/authorized_keys
-EOF
+ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "rsync --stats -avz -e 'ssh -i source.key' /home/cpmove-$USER.tar.gz $WSS@$DEST:/$WSS/"
+echo ""
+echo "$grn Copying of backup file completed. Now starting the restore process in destination server.. $white"
+echo ""
+ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo /usr/local/cpanel/scripts/restorepkg --force cpmove-$USER.tar.gz &>> /var/log/execution.log ; sudo tail /var/log/execution.log ; echo "" ; sleep 1s ; echo  "$grn Restore completed in destination server! $DEST $white" "
 
+echo "$grn Verifying, $white $mag if account $USER is migrated to destination server $DEST $white"
+echo ""
+#Assigning variable to find the domain owner after restoring account.
 
-#sshtmp -n -q -l $WSS $SOURCE /bin/bash "ssh -i source.key $WSS@$DEST 'echo success'"
+WHO="sudo /scripts/whoowns $DOMAIN"
+
+#Step 4: Verification of restoration. Checking if the domain exists after termination.
+
+ssh $WSS@$DEST "$WHO" &> temp.txt
+RESULT="$(cat temp.txt)"
+if [[  $RESULT == $USER ]]; then
+    echo -e "$grn SUCCESS, VERFICATION OK! $white"
+    echo ""
+else
+    echo -e "$red VERFICATION FAILED!!!!  CONTACT HPS!!!! $white"
+    echo ""
+    exit 1
+fi
+
+echo "Now suspending account in source server $SOURCE" ; echo ""
+ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo /scripts/suspendacct $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
+echo ""
+echo "$grn New details of the migrated account $USER: $white"
+echo ""
+ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo whmapi1 listaccts search=$USER searchtype=user | egrep 'domain: | shell: | ip' | grep -v ipv6"
+echo ""
