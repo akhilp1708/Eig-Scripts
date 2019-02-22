@@ -1,5 +1,7 @@
 #!/bin/bash
 #Author Akhil P
+#ABOUT THIS SCRIPT
+#CPANEL BASH SCRIPT TO RESET THE CPANEL ACCOUNT TO DEFAULT STATE
 /usr/bin/clear
 ERR_MSG=""
 cat << "EOF" 
@@ -23,9 +25,6 @@ cat << "EOF"
         '---------------------------------------'
 EOF
 
-#ABOUT THIS SCRIPT
-#CPANEL BASH SCRIPT TO RESET THE CPANEL ACCOUNT TO DEFAULT STATE
-
 #Variables to hold the color counters.
 
 red=$'\e[1;31m'
@@ -48,9 +47,13 @@ ylw=$'\e[1;33'
 
 # use sshtmp in place of ssh 
 
+#Get the WSS username
+
+#WSS=`whoami`
+WSS=root
+
 #Get the inputs from the user
 
-read -p "$blu Enter your WSS username $white: " WSS
 read -p "$blu Enter the server IP $white: " SERVER
 read -p "$blu Enter the primary domain name $white: " DOMAIN
 read -p "$blu Enter the account username to reset $white: " USER
