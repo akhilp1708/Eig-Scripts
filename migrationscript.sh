@@ -36,9 +36,7 @@ ylw=$'\e[1;33'
 
 echo " $mag
 Note:
-
 Kindly make a note of the following before starting the migration on shared hosting.
-
 1. Make sure that you are migrating the domain to a normal server or branded one which hosts the corresponding brand domains.
 2. Do not migrate to a cross-branded server. You can check the branding details here.
    Ex: If the hosting is with HGI, then migrate the domain to the server which has HGI orders or HGI branded servers.
