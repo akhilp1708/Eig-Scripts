@@ -58,7 +58,7 @@ read -p "$blu Enter the server IP $white: " SERVER
 read -p "$blu Enter the primary domain name $white: " DOMAIN
 read -p "$blu Enter the account username to reset $white: " USER
 echo ""
-read -p "$red Continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+read -p "$red Please verify the inputs and continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo "" 
 sleep 2s
 
@@ -76,11 +76,11 @@ echo ""
 
 #Touching temporary log paths for redirecting the output of cpanel scripts.
 
-sudo touch {/var/log/pkgacct.log,/var/log/removeacct.log,/var/log/restorepkg.log}
+sudo touch /var/log/execution.log
 
 #Step 1: Taking the backup of cpanel account skipping the user home directory files, databases, zone, logs..etc
 
-sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/pkgacct.log ; sudo tail /var/log/pkgacct.log
+sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/execution.log ; sudo tail /var/log/execution.log
 
 sleep 5s 
 echo "" ; echo "" 
@@ -89,7 +89,7 @@ echo ""
 
 #Step 2: Removing the cpanel account completely 
 
-sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/removeacct.log ; sudo tail /var/log/removeacct.log
+sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log
 
 sleep 5s 
 echo "" ; echo "" 
@@ -98,7 +98,7 @@ echo ""
 
 #Step 3: Restoring the cpanel account from the backup generated in Step 1
 
-sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/restorepkg.log ; sudo tail /var/log/restorepkg.log
+sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/execution.log ; sudo tail /var/log/execution.log
 
 sleep 5s 
 echo "" ;echo "" 
