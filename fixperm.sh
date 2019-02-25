@@ -1,69 +1,142 @@
 #!/bin/bash
-# Author: Akhil P
-# Script to fix permissions of cPanel accounts
-# http://mrobot.online
-# Usage: ./fixperm.sh cpaneluser
+#Author Akhil P
+#ABOUT THIS SCRIPT
+#CPANEL BASH SCRIPT TO RESET THE CPANEL ACCOUNT TO DEFAULT STATE
+/usr/bin/clear
+ERR_MSG=""
+cat << "EOF"
+                  __   _,--="=--,_   __
+                 /  \."    .-.    "./  \
+                /  ,/  _   : :   _  \/` \
+                \  `| /o\  :_:  /o\ |\__/
+                 `-'| :="~` _ `~"=: |
+                    \`     (_)     `/
+             .-"-.   \      |      /   .-"-.
+        .---{     }--|  /,.-'-.,\  |--{     }---.
+         )  (_)_)_)  \_/`~-===-~`\_/  (_(_(_)  (
+        (                                       )
+         ) Script: cPanelReset.sh              (
+        (  Version: 2.0                         )
+         ) Author: Akhil P                     (
+        (  Email: akhil.pra@endurance.com       )
+         ) https://github.com/akhilp1708       (
+        (  http://www.mrobot.online             )
+         )                                     (
+        '---------------------------------------'
+EOF
 
-if [ "$#" -lt "1" ];then
-  echo "Please input the user name: "
-  exit;
+#Variables to hold the color counters.
+
+red=$'\e[1;31m'
+grn=$'\e[1;32m'
+blu=$'\e[1;34m'
+mag=$'\e[1;35m'
+cyn=$'\e[1;36m'
+white=$'\e[0m'
+ylw=$'\e[1;33'
+
+#Function to auto accept rsa key fingerprint from command line
+
+ function sshtmp
+ {
+     ssh -o "ConnectTimeout 3" \
+         -o "StrictHostKeyChecking no" \
+         -o "UserKnownHostsFile /dev/null" \
+              "$@"
+ }
+
+# use sshtmp in place of ssh
+
+#Get the WSS username
+
+#WSS=`whoami`
+WSS=root
+
+#Get the inputs from the user
+
+read -p "$blu Enter the server IP $white: " SERVER
+read -p "$blu Enter the primary domain name $white: " DOMAIN
+read -p "$blu Enter the account username to reset $white: " USER
+echo ""
+
+WHO="sudo /scripts/whoowns $DOMAIN"
+
+sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
+RESULT="$(cat temp.txt)"
+if [[  $RESULT == $USER ]]; then
+    echo -e "$grn SUCCESS, VERFICATION OK! $white"
+    echo ""
+else
+    echo -e "$red VERFICATION FAILED!!!!  PLEASE INPUT CORRECT INFO ! $white"
+    echo ""
 fi
 
-USER=$@
+read -p "$red Please verify the inputs 'username, domainname, server IP address' and continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+echo ""
+sleep 2s
 
-  #Check account against cPanel users file
-  if ! grep $account /var/cpanel/users/*
-  then
-    tput bold
-    tput setaf 1
-    echo "Invalid cPanel account"
-    tput sgr0
-    exit 0
-  fi
+#Logging the use of the script.
 
-  #Make sure account isn't blank
-  if [ -z $account ]
-  then
-    tput bold
-    tput setaf 1
-    echo "Need an account name!"
-    tput sgr0
-    helptext
-  #Else, start doing work
-  else
+echo -e "$mag The execution of this script is logged :-) $white"
+echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/execution.log
+echo ""
 
-for user in $USER
-do
+sshtmp -q -l $WSS $SERVER /bin/bash << EOF
+sleep 2s
+echo ""
+echo -e "$grn Taking package account... $white"
+echo ""
 
-  PATH=$(egrep "^${user}:" /etc/passwd | cut -d: -f6)
+#Touching temporary log paths for redirecting the output of cpanel scripts.
 
-  if [ ! -f /var/cpanel/users/$user ]; then
-    echo "$user user file missing, likely an invalid user"
-  elif [ "$PATH" == "" ];then
-    echo "Home directory not found for $user"
-  else
-    echo "Updating the ownership for $user"
-    chown -R $user:$user $PATH
-    chmod 711 $PATH
-    chown $user:nobody $PATH/public_html $PATH/.htpasswds
-    chown $user:mail $PATH/etc $PATH/etc/*/shadow $PATH/etc/*/passwd
+sudo touch /var/log/execution.log
 
-    echo "Updating permission for $USER"
-    
-    find $PATH -type d -name cgi-bin -exec chmod 755 {} ; -print
-    find $PATH -type f -exec chmod 644 {} ; -print
-    find $PATH -type d -exec chmod 755 {} ; -print
-  fi
+#Step 1: Taking the backup of cpanel account skipping the user home directory files, databases, zone, logs..etc
 
-done
+sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/execution.log ; sudo tail /var/log/execution.log
 
-chmod 750 $PATH/public_html
+sleep 2s
+echo "" ; echo ""
+echo -e "$red Removing account $USER from server $SERVER $white"
+echo ""
 
-if [ -d "$PATH/.cagefs" ]; then
-  chmod 775 $PATH/.cagefs
-  chmod 700 $PATH/.cagefs/tmp
-  chmod 700 $PATH/.cagefs/var
-  chmod 777 $PATH/.cagefs/cache
-  chmod 777 $PATH/.cagefs/run
-  chmod 700 $PATH/.cagefs/opt
+#Step 2: Removing the cpanel account completely
+
+sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log
+
+sleep 2s
+echo "" ; echo ""
+echo -e "$mag Restoring the account.... $white"
+echo ""
+
+#Step 3: Restoring the cpanel account from the backup generated in Step 1
+
+sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/execution.log ; sudo tail /var/log/execution.log
+
+sleep 2s
+echo "" ;echo ""
+echo "$grn Restore complete...... $white!"
+echo ""
+echo -e "$mag Verifying.... $white"
+echo ""
+echo -ne '#####                     (33%)\r'
+sleep 2
+echo -ne '#############             (66%)\r'
+sleep 3
+echo -ne '#######################   (100%)\r'
+echo -ne '\n'
+echo ""
+EOF
+
+
+sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
+RESULT="$(cat temp.txt)"
+if [[  $RESULT == $USER ]]; then
+    echo -e "$grn SUCCESS, DOMAIN EXIST ! RESET COMPLETED ! $white"
+    echo ""
+else
+    echo -e "$red VERFICATION FAILED!!!!  CONTACT HPS!!!! $white"
+    echo ""
 fi
+
+#END
