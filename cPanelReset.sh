@@ -4,7 +4,7 @@
 #CPANEL BASH SCRIPT TO RESET THE CPANEL ACCOUNT TO DEFAULT STATE
 /usr/bin/clear
 ERR_MSG=""
-cat << "EOF" 
+cat << "EOF"
                   __   _,--="=--,_   __
                  /  \."    .-.    "./  \
                 /  ,/  _   : :   _  \/` \
@@ -45,7 +45,7 @@ ylw=$'\e[1;33'
               "$@"
  }
 
-# use sshtmp in place of ssh 
+# use sshtmp in place of ssh
 
 #Get the WSS username
 
@@ -58,8 +58,21 @@ read -p "$blu Enter the server IP $white: " SERVER
 read -p "$blu Enter the primary domain name $white: " DOMAIN
 read -p "$blu Enter the account username to reset $white: " USER
 echo ""
-read -p "$red Please verify the inputs and continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
-echo "" 
+
+WHO="sudo /scripts/whoowns $DOMAIN"
+
+sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
+RESULT="$(cat temp.txt)"
+if [[  $RESULT == $USER ]]; then
+    echo -e "$grn SUCCESS, VERFICATION OK! $white"
+    echo ""
+else
+    echo -e "$red VERFICATION FAILED!!!!  PLEASE INPUT CORRECT INFO ! $white"
+    echo ""
+fi
+
+read -p "$red Please verify the inputs 'username, domainname, server IP address' and continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+echo ""
 sleep 2s
 
 #Logging the use of the script.
@@ -69,9 +82,9 @@ echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/ex
 echo ""
 
 sshtmp -q -l $WSS $SERVER /bin/bash << EOF
-sleep 4s
+sleep 2s
 echo ""
-echo -e "$grn Taking package account... $white" 
+echo -e "$grn Taking package account... $white"
 echo ""
 
 #Touching temporary log paths for redirecting the output of cpanel scripts.
@@ -82,30 +95,30 @@ sudo touch /var/log/execution.log
 
 sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/execution.log ; sudo tail /var/log/execution.log
 
-sleep 5s 
-echo "" ; echo "" 
-echo -e "$red Removing account $USER from server $SERVER $white" 
+sleep 2s
+echo "" ; echo ""
+echo -e "$red Removing account $USER from server $SERVER $white"
 echo ""
 
-#Step 2: Removing the cpanel account completely 
+#Step 2: Removing the cpanel account completely
 
 sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log
 
-sleep 5s 
-echo "" ; echo "" 
-echo -e "$mag Restoring the account.... $white" 
+sleep 2s
+echo "" ; echo ""
+echo -e "$mag Restoring the account.... $white"
 echo ""
 
 #Step 3: Restoring the cpanel account from the backup generated in Step 1
 
 sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/execution.log ; sudo tail /var/log/execution.log
 
-sleep 5s 
-echo "" ;echo "" 
-echo "$grn Restore complete...... $white!" 
+sleep 2s
+echo "" ;echo ""
+echo "$grn Restore complete...... $white!"
 echo ""
-echo -e "$mag Verifying.... $white" 
-echo "" 
+echo -e "$mag Verifying.... $white"
+echo ""
 echo -ne '#####                     (33%)\r'
 sleep 2
 echo -ne '#############             (66%)\r'
@@ -115,16 +128,11 @@ echo -ne '\n'
 echo ""
 EOF
 
-#Assigning variable to find the domain owner after restoring account.
 
-WHO="sudo /scripts/whoowns $DOMAIN"
-
-#Step 4: Verification of restoration. Checking if the domain exists after termination.
-
-ssh $WSS@$SERVER "$WHO" &> temp.txt
+sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$grn SUCCESS, VERFICATION OK! $white"
+    echo -e "$grn SUCCESS, DOMAIN EXIST ! RESET COMPLETED ! $white"
     echo ""
 else
     echo -e "$red VERFICATION FAILED!!!!  CONTACT HPS!!!! $white"
