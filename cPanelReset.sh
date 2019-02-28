@@ -84,7 +84,7 @@ echo ""
 sshtmp -q -l $WSS $SERVER /bin/bash << EOF
 sleep 2s
 echo ""
-echo -e "$grn Taking package account... $white"
+echo -e "$grn Taking package account without user home files... $white"
 echo ""
 
 #Touching temporary log paths for redirecting the output of cpanel scripts.
@@ -106,7 +106,7 @@ sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.
 
 sleep 2s
 echo "" ; echo ""
-echo -e "$mag Restoring the account.... $white"
+echo -e "$mag Restoring the account without user home files.... $white"
 echo ""
 
 #Step 3: Restoring the cpanel account from the backup generated in Step 1
