@@ -1,9 +1,17 @@
 #!bin/bash
 #Author: Akhil P
 #Script to migrate single cpanel account to remote server by exchanging the ssh keys
-/usr/bin/clear
-ERR_MSG=""
+
 PATH=$PATH:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/home/`whoami`/bin
+/usr/bin/clear
+
+#Logging the execution of this script
+
+LOG_FILE=execution.log.$(date +%F_%R)
+exec > >(tee -a ${LOG_FILE} )
+exec 2> >(tee -a ${LOG_FILE} >&2)
+echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/execution.log
+
 cat << "EOF"
  __  __ _                 _   _                _____           _       _
 |  \/  (_)               | | (_)              / ____|         (_)     | |
@@ -14,7 +22,9 @@ cat << "EOF"
            __/ |                                                | |
           |___/                                                 |_|
 EOF
+
 # These variables hold the color counters.
+
 red=$'\e[1;31m'
 grn=$'\e[1;32m'
 blu=$'\e[1;34m'
@@ -24,7 +34,7 @@ white=$'\e[0m'
 ylw=$'\e[1;33'
 
 #Auto accept rsa key fingerprint from command line
- #  ssh + scp without storing or prompting for keys.
+ #  ssh without storing or prompting for keys.
  #
  function sshtmp
  {
@@ -35,8 +45,11 @@ ylw=$'\e[1;33'
  }
 
 echo " $mag
+
 Note:
+
 Kindly make a note of the following before starting the migration on shared hosting.
+
 1. Make sure that you are migrating the domain to a normal server or branded one which hosts the corresponding brand domains.
 2. Do not migrate to a cross-branded server. You can check the branding details here.
    Ex: If the hosting is with HGI, then migrate the domain to the server which has HGI orders or HGI branded servers.
@@ -61,20 +74,15 @@ read -p "$red Please cross-check the Source/Destination server IP and other info
 
 
 #Step 2: Generating and copying SSH keys for source and remote server
+
 echo ""
 yes "y" | ssh-keygen -t rsa -N "" -f source.key 2> /dev/null
 echo""
 
-#String
-
-cat source.key.pub | awk '{print $2}' > string.txt
-STRING=$(cat string.txt)
-
-
 echo "$blu Copying the key to source server $SOURCE .....$white"
 echo ""
 
-scp -r source.key $WSS@$SOURCE:/$WSS/ 2> /dev/null
+scp -o StrictHostKeyChecking=no -r source.key $WSS@$SOURCE:/$WSS/ 2> /dev/null
 sshtmp -q -l $WSS $SOURCE /bin/bash  <<'EOF'
     sudo chmod 600 source.key
 EOF
@@ -83,15 +91,13 @@ sleep 1s
 echo "$blu Copying the public key to destination server $DEST .... $white"
 echo ""
 
-# Echo the public key to the destination server, also using uniq and sort we get the uniq entries only from authorised_keys, this is to avoid duplicate entries.
+# Echo the public key to the destination server, Also we are taking a backup of authorised_keys
 
-scp -r source.key.pub $WSS@$DEST:/$WSS/ 2> /dev/null
-
+scp -o StrictHostKeyChecking=no -r source.key.pub $WSS@$DEST:/$WSS/ 2> /dev/null
 
 sshtmp -q -l $WSS $DEST /bin/bash  <<'EOF'
-    cat source.key.pub >>  ~/.ssh/authorized_keys
-    sort ~/.ssh/authorized_keys | uniq > ~/.ssh/authorized_keys.uniq
-    yes | mv ~/.ssh/authorized_keys{.uniq,}
+    sudo yes |cp -r ~/.ssh/authorized_keys ~/.ssh/authorized_keys_bak
+    sudo cat source.key.pub >>  ~/.ssh/authorized_keys
 EOF
 
 sleep 1s
@@ -99,25 +105,35 @@ echo "$grn Keys exchanged ! $white"
 echo ""
 echo "$mag Starting the backup generation of account $USER in source server $SOURCE... $white"
 echo ""
-ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo touch /var/log/execution.log ; sudo /scripts/pkgacct $USER  &>> /var/log/execution.log ; sudo tail /var/log/execution.log ; echo "" ; sleep 1s ; echo "$grn Backup process of account $USER completed. Now copying the backup to destination server.. $DEST Please hold on....$white""
+ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo touch /var/log/execution.log ; sudo /scripts/pkgacct $USER  &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
+echo ""
+sleep 1s 
+echo "$grn Now copying the backup to destination server, please hold on.... $white" 
 
 echo ""
 
-ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "rsync --stats -avz -e 'ssh -i source.key' /home/cpmove-$USER.tar.gz $WSS@$DEST:/$WSS/"
+ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "rsync --stats -avz -e 'ssh -o StrictHostKeyChecking=no -q -i source.key' /home/cpmove-$USER.tar.gz $WSS@$DEST:/$WSS/"
 echo ""
 echo "$grn Copying of backup file completed. Now starting the restore process in destination server.. $white"
 echo ""
-ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo /usr/local/cpanel/scripts/restorepkg --force cpmove-$USER.tar.gz &>> /var/log/execution.log ; sudo tail /var/log/execution.log ; echo "" ; sleep 1s ; echo  "$grn Restore completed in destination server! $DEST $white" "
+ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo /usr/local/cpanel/scripts/restorepkg --force cpmove-$USER.tar.gz &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
+
+echo ""
+
+echo  "$grn Restore completed in destination server! $white"
+
+echo ""
 
 echo "$grn Verifying, $white $mag if account $USER is migrated to destination server $DEST $white"
 echo ""
+
 #Assigning variable to find the domain owner after restoring account.
 
 WHO="sudo /scripts/whoowns $DOMAIN"
 
 #Step 4: Verification of restoration. Checking if the domain exists after termination.
 
-ssh $WSS@$DEST "$WHO" &> temp.txt
+sshtmp -q $WSS@$DEST "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
     echo -e "$grn SUCCESS, VERFICATION OK! $white"
@@ -128,10 +144,16 @@ else
     exit 1
 fi
 
-echo "Now suspending account in source server $SOURCE" ; echo ""
+#Step 5: Now, since the migration is completed, need to remove the ssh keys from source and destination server.
+
+ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo yes | mv ~/.ssh/authorized_keys_bak ~/.ssh/authorized_keys"
+
+#Step 6: Suspending account in source server
+
+echo "$red Now suspending account in source server $SOURCE $white" ; echo ""
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo /scripts/suspendacct $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
 echo ""
-echo "$grn New details of the migrated account $USER: $white"
+echo "$grn Details of the migrated account $USER in new server $DEST: $white"
 echo ""
 ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo whmapi1 listaccts search=$USER searchtype=user | egrep 'domain: | shell: | ip' | grep -v ipv6"
 echo ""
