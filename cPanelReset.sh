@@ -1,9 +1,19 @@
 #!/bin/bash
 #Author Akhil P
-#ABOUT THIS SCRIPT
-#CPANEL BASH SCRIPT TO RESET THE CPANEL ACCOUNT TO DEFAULT STATE
+#About this Script
+#cPanel Bash script to reset a cPanel account to default state
+
+PATH=$PATH:/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:/home/`whoami`/bin
+
 /usr/bin/clear
-ERR_MSG=""
+
+#Logging the execution of this script
+
+LOG_FILE=execution.log.$(date +%F_%R)
+exec > >(tee -a ${LOG_FILE} )
+exec 2> >(tee -a ${LOG_FILE} >&2)
+echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/execution.log
+
 cat << "EOF"
                   __   _,--="=--,_   __
                  /  \."    .-.    "./  \
@@ -59,42 +69,59 @@ read -p "$blu Enter the primary domain name $white: " DOMAIN
 read -p "$blu Enter the account username to reset $white: " USER
 echo ""
 
+# Checking the host IP for making sure the input IP is not bulk hosting server. 
+
+HOSTIP=`host $SERVER | awk '{print $NF}'`;
+HOSTCHK=`echo $HOSTIP | grep -ic "amazon"`;
+
+if [ $HOSTCHK -eq 1 ]
+then
+echo -e "$red Your input is a BH server ! Please enter a SD or MD server IP !  $white"
+
+echo ""
+
+echo -e  "$blu Please recheck and enter the information again ! $white " 
+
+echo ""
+
+exit 0 
+fi
+
+#Verifying the inputs
+
 WHO="sudo /scripts/whoowns $DOMAIN"
 
 sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$grn SUCCESS, VERFICATION OK! $white"
+    echo -e "$grn SUCCESS, VERIFICATION OK! $white"
     echo ""
 else
-    echo -e "$red VERFICATION FAILED!!!!  PLEASE INPUT CORRECT INFO ! $white"
+    echo -e "$red VERIFICATION FAILED!!!!  PLEASE INPUT CORRECT INFO ! $white"
     echo ""
+    exit 0
 fi
 
 read -p "$red Please verify the inputs 'username, domainname, server IP address' and continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo ""
 sleep 2s
 
-#Logging the use of the script.
-
-echo -e "$mag The execution of this script is logged :-) $white"
-echo "[`date`] [`whoami`] Executed the cPanelReset_script" >> /home/akhil.pra/execution.log
-echo ""
+#Logging into Server
 
 sshtmp -q -l $WSS $SERVER /bin/bash << EOF
+
 sleep 2s
 echo ""
 echo -e "$grn Taking package account without user home files... $white"
 echo ""
 
-#Touching temporary log paths for redirecting the output of cpanel scripts.
+#Touching temporary log paths for redirecting the output of cpanel scripts. This is created to tail the output of cpanel scripts.
 
 sudo touch /var/log/execution.log
 
 #Step 1: Taking the backup of cpanel account skipping the user home directory files, databases, zone, logs..etc
 
 sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/execution.log ; sudo tail /var/log/execution.log
-
 sleep 2s
 echo "" ; echo ""
 echo -e "$red Removing account $USER from server $SERVER $white"
@@ -103,7 +130,6 @@ echo ""
 #Step 2: Removing the cpanel account completely
 
 sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log
-
 sleep 2s
 echo "" ; echo ""
 echo -e "$mag Restoring the account without user home files.... $white"
@@ -112,7 +138,6 @@ echo ""
 #Step 3: Restoring the cpanel account from the backup generated in Step 1
 
 sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/execution.log ; sudo tail /var/log/execution.log
-
 sleep 2s
 echo "" ;echo ""
 echo "$grn Restore complete...... $white!"
@@ -128,6 +153,7 @@ echo -ne '\n'
 echo ""
 EOF
 
+#Step 4: Verifying
 
 sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
@@ -135,8 +161,12 @@ if [[  $RESULT == $USER ]]; then
     echo -e "$grn SUCCESS, DOMAIN EXIST ! RESET COMPLETED ! $white"
     echo ""
 else
-    echo -e "$red VERFICATION FAILED!!!!  CONTACT HPS!!!! $white"
+    echo -e "$red VERIFICATION FAILED!!!!  CONTACT HPS!!!! $white"
     echo ""
 fi
+
+#Step 5: Removing the temporary log files created
+
+sshtmp -q $WSS@$SERVER "sudo mv /var/log/execution.log /tmp/"
 
 #END
