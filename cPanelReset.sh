@@ -69,7 +69,7 @@ read -p "$blu Enter the primary domain name $white: " DOMAIN
 read -p "$blu Enter the account username to reset $white: " USER
 echo ""
 
-# Checking the host IP for making sure the input IP is not bulk hosting server. 
+# Checking the host IP for making sure the input IP is not bulk hosting server.
 
 HOSTIP=`host $SERVER | awk '{print $NF}'`;
 HOSTCHK=`echo $HOSTIP | grep -ic "amazon"`;
@@ -80,11 +80,11 @@ echo -e "$red Your input is a BH server ! Please enter a SD or MD server IP !  $
 
 echo ""
 
-echo -e  "$blu Please recheck and enter the information again ! $white " 
+echo -e  "$blu Please recheck and enter the information again ! $white "
 
 echo ""
 
-exit 0 
+exit 0
 fi
 
 #Verifying the inputs
@@ -103,9 +103,9 @@ else
 fi
 
 echo -e "$ylw ************* $white"
-echo -e "Domain name : $DOMAIN\nServer name : $HOSTIP\nHosting IP  : $SERVER\ncPanel User : $WHO"
+echo -e "$blu Domain name :$white $DOMAIN\n$blu Server name :$white $HOSTIP\n$blu Hosting IP  :$white $SERVER\n$blu cPanel User :$white $RESULT"
 echo -e "$ylw ************* $white"
-
+echo "" ; echo ""
 read -p "$red Please verify the inputs 'username, domainname, server IP address' and press 'y' to continue with the account reset? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 echo ""
 sleep 2s
@@ -113,46 +113,36 @@ sleep 2s
 #Logging into Server
 
 sshtmp -q -l $WSS $SERVER /bin/bash << EOF
-
 sleep 2s
 echo ""
 echo -e "$grn Taking package account without user home files... $white"
 echo ""
-
 #Touching temporary log paths for redirecting the output of cpanel scripts. This is created to tail the output of cpanel scripts.
-
 sudo touch /var/log/execution.log
-
 #Step 1: Taking the backup of cpanel account skipping the user home directory files, databases, zone, logs..etc
-
-echo -e "$ylw ****************** $white"
+echo -e "$ylw ------------------------------------ $white"
 sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/execution.log ; sudo tail /var/log/execution.log
 sleep 2s
-echo "" ; 
-echo -e "$ylw ****************** $white"
+echo "" ;
+echo -e "$ylw ------------------------------------ $white"
 echo ""
 echo -e "$red Removing account $USER from server $SERVER $white"
 echo ""
-
 #Step 2: Removing the cpanel account completely
-
-echo -e "$ylw ****************** $white"
+echo -e "$ylw ------------------------------------ $white"
 sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log
 sleep 2s
-echo "" ; 
-echo -e "$ylw ****************** $white"
-
+echo "" ;
+echo -e "$ylw ------------------------------------ $white"
 echo ""
 echo -e "$mag Restoring the account without user home files.... $white"
 echo ""
-
 #Step 3: Restoring the cpanel account from the backup generated in Step 1
-
-echo -e "$ylw ****************** $white"
+echo -e "$ylw ------------------------------------ $white"
 sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/execution.log ; sudo tail /var/log/execution.log
 sleep 2s
 echo "" ;
-echo -e "$ylw ****************** $white"
+echo -e "$ylw ------------------------------------ $white"
 echo ""
 echo "$grn Restore complete...... $white!"
 echo ""
