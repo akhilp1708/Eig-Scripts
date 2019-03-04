@@ -1,12 +1,13 @@
-# bashscripts
+# Scripts developed for Eig - HPS Team, banglore. 
 
-Scripts developed for Eig - HPS Team, banglore. 
-
-# Script_1:
+# Script 1:
 cPanel_Reset.sh 
 
 Working: 
 WATCH: http://recordit.co/0mwHBBE4Qm
 
-# Script_2:
+The cPanel Reset script is used to reset a cPanel account to its default state. The script removes the user home files, custom configurations, dns zone, databases..etc and restore the account to default state. 
+
+# Script 2:
 Migration.sh
+
