@@ -64,6 +64,7 @@ WSS=root
 
 #Get the inputs from the user
 
+echo ""
 read -p "$blu Enter the server IP $white: " SERVER
 read -p "$blu Enter the primary domain name $white: " DOMAIN
 read -p "$blu Enter the account username to reset $white: " USER
@@ -144,16 +145,18 @@ sleep 2s
 echo "" ;
 echo -e "$ylw ------------------------------------ $white"
 echo ""
-echo "$grn Restore complete...... $white!"
 echo ""
-echo -e "$mag Verifying.... $white"
+echo "$grn Restore completed ...... $white!"
 echo ""
-echo -ne '#####                     (33%)\r'
+echo ""
+
+echo -ne '$blu Verifying #########                                   (33%) $white\r'
 sleep 2
-echo -ne '#############             (66%)\r'
+echo -ne '$blu Verifying ########################                    (66%) $white\r'
 sleep 3
-echo -ne '#######################   (100%)\r'
+echo -ne '$blu Verifying #########################################   (100%) $white\r'
 echo -ne '\n'
+echo ""
 echo ""
 EOF
 
@@ -162,7 +165,7 @@ EOF
 sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$grn SUCCESS, DOMAIN EXIST ! RESET COMPLETED ! $white"
+    echo -e "$grn SUCCESS! RESET COMPLETED! $white"
     echo ""
 else
     echo -e "$red VERIFICATION FAILED!!!!  CONTACT HPS!!!! $white"
