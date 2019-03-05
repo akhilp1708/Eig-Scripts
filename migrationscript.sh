@@ -44,42 +44,48 @@ ylw=$'\e[1;33m'
               "$@"
  }
 
-echo " $mag
+echo "" ; echo "" ; echo "$grn Welcome $(whoami) ! $white" ; echo ""
+echo -e "$ylw :::::: PLEASE READ THIS ! ::::::$white"
+echo -e "$ylw ======================================================================================================================================== $white"
+echo "" ; echo -e "$red This script works only for Single/Multi-Domain Servers $white" ; echo ""
+cat << "EOF"
+*  Make sure that you are migrating the domain to a normal server or branded one which hosts the corresponding brand domains.
+*  Do not migrate to a cross-branded server. You can check the branding details here.
 
-Note:
-
-Kindly make a note of the following before starting the migration on shared hosting.
-
-1. Make sure that you are migrating the domain to a normal server or branded one which hosts the corresponding brand domains.
-2. Do not migrate to a cross-branded server. You can check the branding details here.
    Ex: If the hosting is with HGI, then migrate the domain to the server which has HGI orders or HGI branded servers.
-3. While updating BLL, make sure you specify the correct hostname. This is important as the BLL script will check the tempURL to verify the server hostname. There are 2 types of hostnames: *.webhostbox.net which is a normal server. *.brandservers.com which is a branded hostname.
-If the server is a branded server, we should use the branded server hostname only. If you use  *.webhostbox.net for a branded server, the query to update BLL won't work.
-$white
-"
+
+*  While updating BLL, make sure you specify the correct hostname. This is important as the BLL script will check the tempURL to verify the serv   er hostname. There are 2 types of hostnames: *.webhostbox.net which is a normal server. *.brandservers.com which is a branded hostname.
+   If the server is a branded server, we should use the branded server hostname only. If you use  *.webhostbox.net for a branded server, the que   ry to update BLL won't work.
+EOF
+echo -e "$ylw ======================================================================================================================================== $white"
 
 #Get the WSS username
 
 #WSS=`whoami`
 WSS=root
+
 #Step 1: Get the inputs from the user
 
+echo ""
 read -p "$blu Enter the Source server IP $white: " SOURCE
 read -p "$blu Enter the Destination server IP $white: " DEST
 read -p "$blu Enter the Main username $white: " USER
 read -p "$blu Enter the Primary domain name $white: " DOMAIN
 echo ""
 
+SHOSTIP=`host $SOURCE | awk '{print $NF}'`;
+DHOSTIP=`host $DEST | awk '{print $NF}'`;
+
 #Verifying the inputs
 
 WHO="sudo /scripts/whoowns $DOMAIN"
 
-echo -e "$ylw Checking if the domain exists in source server $SOURCE ... ! $white"
+echo -e "$ylw Checking if the domain exists in source server '$SHOSTIP' ... ! $white"
 
 sshtmp -q  $WSS@$SOURCE "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$grn Success, verification OK! The domain exists in source server $SOURCE $white"
+    echo -e "$grn Success, verification OK! The domain exists in source server '$SHOSTIP' $white"
     echo ""
 else
     echo -e "$red VERIFICATION FAILED!!!!  PLEASE INPUT CORRECT INFO ! $white"
@@ -88,12 +94,12 @@ else
 fi
 
 
-echo -e "$ylw Checking if the domain exists in destination server $SOURCE ... ! $white"
+echo -e "$ylw Checking if the domain exists in destination server '$DHOSTIP' ... ! $white"
 
 sshtmp -q  $WSS@$DEST "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$red Verfication complete: The domain exists in destinaton server $DEST , hence ABORT ! $white"
+    echo -e "$red Verfication complete: The domain exists in destinaton server '$DHOSTIP', hence aborting script! $white"
     echo ""
     exit 0
 else
@@ -101,12 +107,10 @@ else
     echo ""
 fi
 
-SHOSTIP=`host $SOURCE | awk '{print $NF}'`;
-DHOSTIP=`host $DEST | awk '{print $NF}'`;
 
-echo -e "$ylw ************* $white"
-echo -e "$blu Domain name :$white $DOMAIN\n$blu Source server :$white $SHOSTIP\n$blu Destination server  :$white $DHOSTIP\n$blu cPanel User :$white $RESULT"
-echo -e "$ylw ************* $white"
+echo -e "$ylw ************** $white"
+echo -e "$blu Domain name :$white $DOMAIN\n$blu Source server :$white $SHOSTIP\n$blu Destination server  :$white $DHOSTIP\n$blu cPanel User :$white $USER"
+echo -e "$ylw ************** $white"
 echo "" ; echo ""
 
 sleep 1s
@@ -116,12 +120,14 @@ read -p "$red Please cross-check the Source/Destination server IP and other info
 #Step 2: Generating and copying SSH keys for source and remote server
 
 echo ""
-echo -e "$ylw ------------------------------------ $white"
+echo "$blu Generating SSH keys.... $white"
+echo ""
+echo -e "$ylw ======================================================================================================================================== $white"
 yes "y" | ssh-keygen -t rsa -N "" -f source.key 2> /dev/null
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
 echo""
 
-echo "$blu Copying the key to source server $SOURCE .....$white"
+echo "$blu Copying the key to source server '$SHOSTIP' .....$white"
 echo ""
 
 scp -o StrictHostKeyChecking=no -r source.key $WSS@$SOURCE:/$WSS/ 2> /dev/null
@@ -130,7 +136,7 @@ sshtmp -q -l $WSS $SOURCE /bin/bash  <<'EOF'
 EOF
 
 sleep 1s
-echo "$blu Copying the public key to destination server $DEST .... $white"
+echo "$blu Copying the public key to destination server '$DHOSTIP' .... $white"
 echo ""
 
 # Echo the public key to the destination server, Also we are taking a backup of authorised_keys
@@ -145,32 +151,32 @@ EOF
 sleep 1s
 echo "$grn Keys exchanged ! $white"
 echo ""
-echo "$mag Starting the backup generation of account $USER in source server $SOURCE... $white"
+echo "$blu Starting the backup generation of account $USER in source server '$SHOSTIP'... $white"
 echo ""
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================= $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo touch /var/log/execution.log ; sudo /scripts/pkgacct $USER  &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================= $white"
 echo ""
-sleep 1s 
-echo "$grn Now copying the backup to destination server, please hold on.... $white" 
+sleep 1s
+echo "$blu Now copying the backup to destination server, please hold on.... $white"
 
 echo ""
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "rsync --stats -avz -e 'ssh -o StrictHostKeyChecking=no -q -i source.key' /home/cpmove-$USER.tar.gz $WSS@$DEST:/$WSS/"
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
 echo ""
-echo "$grn Copying of backup file completed. Now starting the restore process in destination server.. $white"
+echo "$blu Copying of backup file completed. Now starting the restore process in destination server '$DHOSTIP'.. $white"
 echo ""
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo /usr/local/cpanel/scripts/restorepkg --force cpmove-$USER.tar.gz &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
 echo ""
 
-echo  "$grn Restore completed in destination server! $white"
+echo  "$blu Restore completed in destination server! $white"
 
 echo ""
 
-echo "$grn Verifying, $white $mag if account $USER is migrated to destination server $DEST $white"
+echo "$blu Verifying, if account '$USER' is migrated to destination server '$DHOSTIP' $white"
 echo ""
 
 #Assigning variable to find the domain owner after restoring account.
@@ -196,20 +202,18 @@ ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo yes | mv ~/.ssh/authorized_k
 
 #Step 6: Suspending account in source server
 
-echo "$red Now suspending account in source server $SOURCE $white" ; echo ""
-echo -e "$ylw ------------------------------------ $white"
+echo "$blu Now suspending account in source server '$SHOSTIP' $white" ; echo ""
+echo -e "$ylw ========================================================================================================================================= $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo /scripts/suspendacct $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ========================================================================================================================================= $white"
 echo ""
-echo "$grn Details of the migrated account $USER in new server $DHOSTIP: $white"
+echo "$grn Details of the migrated account '$USER' in server '$DHOSTIP': $white"
 echo ""
-echo -e "$ylw ------------------------------------ $white"
-ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo whmapi1 listaccts search=$USER searchtype=user | egrep 'domain: | ip' | grep -v ipv6"
-echo "" ; echo -e "$blu Nameservers to use: $white" ; echo ""
-ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo egrep 'ns1|ns2' /etc/wwwacct.conf | head -n2 | awk '{print $2}' "
-echo "" ; echo -e "$blu Setup the below alias in new server $DHOSTIP: $white" ; echo ""
-echo "$DOMAIN.$DHOSTIP" ; echo ""
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
+echo ""
+sshtmp -q $WSS@$DEST "sudo touch domaininfo.txt ; echo $DOMAIN > domaininfo.txt ; sudo /scripts/ipusage | grep $DOMAIN | cut -d ' ' -f 1  >> domaininfo.txt ; sudo egrep 'ns1|ns2' /etc/wwwacct.conf | head -n2 | awk '{print $2}' >> domaininfo.txt ; echo "http://$DOMAIN.$DHOSTIP" >> domaininfo.txt ; sudo cat domaininfo.txt ; sudo cat /dev/null > domaininfo.txt ; sudo mv domaininfo.txt /tmp/"
+echo ""
+echo -e "$ylw ======================================================================================================================================== $white"
 echo ""
 
 #END
