@@ -90,14 +90,14 @@ fi
 
 echo -e "$ylw Checking if the domain exists in destination server $SOURCE ... ! $white"
 
-sshtmp -q  $WSS@$SOURCE "$WHO" &> temp.txt
+sshtmp -q  $WSS@$DEST "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$grn Verfication complete: The domain exists in destinaton server $DEST $white"
+    echo -e "$red Verfication complete: The domain exists in destinaton server $DEST , hence ABORT ! $white"
     echo ""
     exit 0
 else
-    echo -e "$red Verification complete: The domain does not exist in destination server and you are good to procceed with the migration ! $white"
+    echo -e "$grn Verification complete: The domain does not exist in destination server and you are good to procceed with the migration ! $white"
     echo ""
 fi
 
@@ -201,10 +201,15 @@ echo -e "$ylw ------------------------------------ $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo /scripts/suspendacct $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
 echo -e "$ylw ------------------------------------ $white"
 echo ""
-echo "$grn Details of the migrated account $USER in new server $DEST: $white"
+echo "$grn Details of the migrated account $USER in new server $DHOSTIP: $white"
 echo ""
 echo -e "$ylw ------------------------------------ $white"
-ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo whmapi1 listaccts search=$USER searchtype=user | egrep 'domain: | shell: | ip' | grep -v ipv6"
-ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo egrep 'NS|NS2' /etc/wwwacct.conf | head -n2 | awk '{print $2}' "
+ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo whmapi1 listaccts search=$USER searchtype=user | egrep 'domain: | ip' | grep -v ipv6"
+echo "" ; echo -e "$blu Nameservers to use: $white" ; echo ""
+ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo egrep 'ns1|ns2' /etc/wwwacct.conf | head -n2 | awk '{print $2}' "
+echo "" ; echo -e "$blu Setup the below alias in new server $DHOSTIP: $white" ; echo ""
+echo "$DOMAIN.$DHOSTIP" ; echo ""
 echo -e "$ylw ------------------------------------ $white"
 echo ""
+
+#END
