@@ -108,7 +108,7 @@ WHO="sudo /scripts/whoowns $DOMAIN"
 sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$grn SUCCESS, VERIFICATION OK! $white"
+    echo -e "$grn Success, Verification OK! : The domain and user matches in the provided server address $white"
     echo ""
 else
     echo -e "$red VERIFICATION FAILED!!!!  PLEASE INPUT CORRECT INFO ! $white"
@@ -129,7 +129,7 @@ sleep 2s
 sshtmp -q -l $WSS $SERVER /bin/bash << EOF
 sleep 2s
 echo ""
-echo -e "$grn Taking package account without user home files... $white"
+echo -e "$blu Taking package account without user home files... $white"
 echo ""
 
 #Touching temporary log paths for redirecting the output of cpanel scripts. This is created to tail the output of cpanel scripts.
@@ -143,7 +143,7 @@ sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains
 echo -e "$ylw ======================================================================================================================================== $white"
 
 echo ""
-echo -e "$red Removing account $USER from server $SERVER $white"
+echo -e "$blu Removing account $USER from server '$HOSTIP' $white"
 echo ""
 
 #Step 2: Removing the cpanel account completely
@@ -152,7 +152,7 @@ echo -e "$ylw ==================================================================
 sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log
 echo -e "$ylw ======================================================================================================================================== $white"
 echo ""
-echo -e "$mag Restoring the account without user home files.... $white"
+echo -e "$blu Restoring the account without user home files.... $white"
 echo ""
 
 #Step 3: Restoring the cpanel account from the backup generated in Step 1
@@ -171,7 +171,7 @@ echo -ne '$blu Verifying ##############################                         
 sleep 3
 echo -ne '$blu Verifying ###########################################################                                            (75%) $white\r'
 sleep 2
-echo -ne '$blu Verifying ####################################################################################################   (75%) $white\r'
+echo -ne '$blu Verifying ####################################################################################################   (100%) $white\r'
 echo -ne '\n'
 echo ""
 echo ""
@@ -182,7 +182,7 @@ EOF
 sshtmp -q  $WSS@$SERVER "$WHO" &> temp.txt
 RESULT="$(cat temp.txt)"
 if [[  $RESULT == $USER ]]; then
-    echo -e "$grn SUCCESS! RESET COMPLETED! $white"
+    echo -e "$grn SUCCESS! $white"
     echo ""
 else
     echo -e "$red VERIFICATION FAILED!!!!  CONTACT HPS!!!! $white"
