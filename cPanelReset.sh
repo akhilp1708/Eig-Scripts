@@ -62,6 +62,8 @@ ylw=$'\e[1;33m'
 #WSS=`whoami`
 WSS=root
 
+echo "" ; echo "" ; echo "$grn Welcome $(whoami) ! $white" ; echo ""
+
 #Get the inputs from the user
 
 echo ""
