@@ -64,6 +64,17 @@ WSS=root
 
 echo "" ; echo "" ; echo "$grn Welcome $(whoami) ! $white" ; echo ""
 
+echo -e "$ylw :::::: PLEASE READ THIS ! ::::::$white"
+echo -e "$ylw ======================================================================================================================================== $white"
+echo "" ; echo -e "$red This script works only for Single/Multi-Domain Servers $white" ; echo ""
+cat << "EOF"
+*  This script basically does the following:
+*  Creates a cPanel account package file which does not contain any of the customer's customizations, creates archive without user's home files,   MySQL data etc. It puts the archive named cpmove-username.tar.gz in the /home directory.
+*  Then terminates the user account from system completely, and restores the archive taken before.
+EOF
+echo -e "$ylw ======================================================================================================================================== $white"
+
+
 #Get the inputs from the user
 
 echo ""
@@ -120,43 +131,47 @@ sleep 2s
 echo ""
 echo -e "$grn Taking package account without user home files... $white"
 echo ""
+
 #Touching temporary log paths for redirecting the output of cpanel scripts. This is created to tail the output of cpanel scripts.
+
 sudo touch /var/log/execution.log
+
 #Step 1: Taking the backup of cpanel account skipping the user home directory files, databases, zone, logs..etc
-echo -e "$ylw ------------------------------------ $white"
+
+echo -e "$ylw ======================================================================================================================================== $white"
 sudo /usr/local/cpanel/scripts/pkgacct --skipacctdb --skipdnszones --skipdomains --skipftpusers --skiphomedir --skipintegrationlinks --skiplogs --skipmailconfig --skipmailman --skipmysql --skippgsql --skipssl --skipuserdata --skipshell $USER &> /var/log/execution.log ; sudo tail /var/log/execution.log
-sleep 2s
-echo "" ;
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
+
 echo ""
 echo -e "$red Removing account $USER from server $SERVER $white"
 echo ""
+
 #Step 2: Removing the cpanel account completely
-echo -e "$ylw ------------------------------------ $white"
+
+echo -e "$ylw ======================================================================================================================================== $white"
 sudo /usr/local/cpanel/scripts/removeacct  --force $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log
-sleep 2s
-echo "" ;
-echo -e "$ylw ------------------------------------ $white"
+echo -e "$ylw ======================================================================================================================================== $white"
 echo ""
 echo -e "$mag Restoring the account without user home files.... $white"
 echo ""
-#Step 3: Restoring the cpanel account from the backup generated in Step 1
-echo -e "$ylw ------------------------------------ $white"
-sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/execution.log ; sudo tail /var/log/execution.log
-sleep 2s
-echo "" ;
-echo -e "$ylw ------------------------------------ $white"
-echo ""
-echo ""
-echo "$grn Restore completed ...... $white!"
-echo ""
-echo ""
 
-echo -ne '$blu Verifying #########                                   (33%) $white\r'
+#Step 3: Restoring the cpanel account from the backup generated in Step 1
+
+echo -e "$ylw ======================================================================================================================================== $white"
+sudo /usr/local/cpanel/scripts/restorepkg /home/cpmove-$USER.tar.gz  &>> /var/log/execution.log ; sudo tail /var/log/execution.log
+echo -e "$ylw ======================================================================================================================================== $white"
+sleep 1s
+echo ""
+echo "$grn RESTORE COMPLETED ! $white!"
+echo ""
+echo ""
+echo -ne '$blu Verifying #########                                                                                              (33%) $white\r'
 sleep 2
-echo -ne '$blu Verifying ########################                    (66%) $white\r'
+echo -ne '$blu Verifying ##############################                                                                         (66%) $white\r'
 sleep 3
-echo -ne '$blu Verifying #########################################   (100%) $white\r'
+echo -ne '$blu Verifying ###########################################################                                            (75%) $white\r'
+sleep 2
+echo -ne '$blu Verifying ####################################################################################################   (75%) $white\r'
 echo -ne '\n'
 echo ""
 echo ""
