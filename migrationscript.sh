@@ -31,7 +31,7 @@ blu=$'\e[1;34m'
 mag=$'\e[1;35m'
 cyn=$'\e[1;36m'
 white=$'\e[0m'
-ylw=$'\e[1;33'
+ylw=$'\e[1;33m'
 
 #Auto accept rsa key fingerprint from command line
  #  ssh without storing or prompting for keys.
@@ -69,14 +69,56 @@ read -p "$blu Enter the Destination server IP $white: " DEST
 read -p "$blu Enter the Main username $white: " USER
 read -p "$blu Enter the Primary domain name $white: " DOMAIN
 echo ""
-sleep 2s
+
+#Verifying the inputs
+
+WHO="sudo /scripts/whoowns $DOMAIN"
+
+echo -e "$ylw Checking if the domain exists in source server $SOURCE ... ! $white"
+
+sshtmp -q  $WSS@$SOURCE "$WHO" &> temp.txt
+RESULT="$(cat temp.txt)"
+if [[  $RESULT == $USER ]]; then
+    echo -e "$grn Success, verification OK! The domain exists in source server $SOURCE $white"
+    echo ""
+else
+    echo -e "$red VERIFICATION FAILED!!!!  PLEASE INPUT CORRECT INFO ! $white"
+    echo ""
+    exit 0
+fi
+
+
+echo -e "$ylw Checking if the domain exists in destination server $SOURCE ... ! $white"
+
+sshtmp -q  $WSS@$SOURCE "$WHO" &> temp.txt
+RESULT="$(cat temp.txt)"
+if [[  $RESULT == $USER ]]; then
+    echo -e "$grn Verfication complete: The domain exists in destinaton server $DEST $white"
+    echo ""
+    exit 0
+else
+    echo -e "$red Verification complete: The domain does not exist in destination server and you are good to procceed with the migration ! $white"
+    echo ""
+fi
+
+SHOSTIP=`host $SOURCE | awk '{print $NF}'`;
+DHOSTIP=`host $DEST | awk '{print $NF}'`;
+
+echo -e "$ylw ************* $white"
+echo -e "$blu Domain name :$white $DOMAIN\n$blu Source server :$white $SHOSTIP\n$blu Destination server  :$white $DHOSTIP\n$blu cPanel User :$white $RESULT"
+echo -e "$ylw ************* $white"
+echo "" ; echo ""
+
+sleep 1s
 read -p "$red Please cross-check the Source/Destination server IP and other informations and procceed? $white (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 
 
 #Step 2: Generating and copying SSH keys for source and remote server
 
 echo ""
+echo -e "$ylw ------------------------------------ $white"
 yes "y" | ssh-keygen -t rsa -N "" -f source.key 2> /dev/null
+echo -e "$ylw ------------------------------------ $white"
 echo""
 
 echo "$blu Copying the key to source server $SOURCE .....$white"
@@ -105,19 +147,23 @@ echo "$grn Keys exchanged ! $white"
 echo ""
 echo "$mag Starting the backup generation of account $USER in source server $SOURCE... $white"
 echo ""
+echo -e "$ylw ------------------------------------ $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo touch /var/log/execution.log ; sudo /scripts/pkgacct $USER  &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
+echo -e "$ylw ------------------------------------ $white"
 echo ""
 sleep 1s 
 echo "$grn Now copying the backup to destination server, please hold on.... $white" 
 
 echo ""
-
+echo -e "$ylw ------------------------------------ $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "rsync --stats -avz -e 'ssh -o StrictHostKeyChecking=no -q -i source.key' /home/cpmove-$USER.tar.gz $WSS@$DEST:/$WSS/"
+echo -e "$ylw ------------------------------------ $white"
 echo ""
 echo "$grn Copying of backup file completed. Now starting the restore process in destination server.. $white"
 echo ""
+echo -e "$ylw ------------------------------------ $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo /usr/local/cpanel/scripts/restorepkg --force cpmove-$USER.tar.gz &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
-
+echo -e "$ylw ------------------------------------ $white"
 echo ""
 
 echo  "$grn Restore completed in destination server! $white"
@@ -151,10 +197,14 @@ ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "sudo yes | mv ~/.ssh/authorized_k
 #Step 6: Suspending account in source server
 
 echo "$red Now suspending account in source server $SOURCE $white" ; echo ""
+echo -e "$ylw ------------------------------------ $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$SOURCE "sudo /scripts/suspendacct $USER &>> /var/log/execution.log ; sudo tail /var/log/execution.log "
+echo -e "$ylw ------------------------------------ $white"
 echo ""
 echo "$grn Details of the migrated account $USER in new server $DEST: $white"
 echo ""
+echo -e "$ylw ------------------------------------ $white"
 ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo whmapi1 listaccts search=$USER searchtype=user | egrep 'domain: | shell: | ip' | grep -v ipv6"
 ssh -o StrictHostKeyChecking=no -q $WSS@$DEST "echo "" ; sudo egrep 'NS|NS2' /etc/wwwacct.conf | head -n2 | awk '{print $2}' "
+echo -e "$ylw ------------------------------------ $white"
 echo ""
