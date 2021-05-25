@@ -1,5 +1,3 @@
-# Scripts developed for Eig - HPS Team, banglore. 
-
 # Script 1:
 cPanel_Reset.sh 
 
