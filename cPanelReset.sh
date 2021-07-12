@@ -28,7 +28,6 @@ cat << "EOF"
          ) Script: cPanelReset.sh              (
         (  Version: 2.0                         )
          ) Author: Akhil P                     (
-        (  Email: akhil.pra@endurance.com       )
          ) https://github.com/akhilp1708       (
         (  http://www.mrobot.online             )
          )                                     (
